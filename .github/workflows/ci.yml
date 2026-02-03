@@ -30,7 +30,7 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: ./dummy-car-app
+          context: .
           push: true
           tags: |
             ghcr.io/tbhuvaneswar/dummy-car:${{ steps.vars.outputs.TAG }}
