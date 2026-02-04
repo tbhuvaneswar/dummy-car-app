@@ -13,13 +13,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # -------------------------
+      # Checkout Application Repo
+      # -------------------------
       - name: Checkout app repo
         uses: actions/checkout@v4
 
+      # -------------------------
+      # Create short image tag
+      # -------------------------
       - name: Set tag
         id: vars
         run: echo "TAG=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
+      # -------------------------
+      # Debug identity
+      # -------------------------
       - name: Debug identity
         run: |
           echo "actor=${{ github.actor }}"
@@ -27,6 +36,9 @@ jobs:
           echo "owner=${{ github.repository_owner }}"
           echo "tag=${{ steps.vars.outputs.TAG }}"
 
+      # -------------------------
+      # Login to GHCR
+      # -------------------------
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -34,6 +46,9 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # -------------------------
+      # Build & Push Docker Image
+      # -------------------------
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
@@ -43,16 +58,21 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/dummy-car:${{ steps.vars.outputs.TAG }}
             ghcr.io/${{ github.repository_owner }}/dummy-car:latest
 
-      # Checkout GitOps repo (now under tbhuvaneswar)
+      # -------------------------
+      # Checkout GitOps Repo
+      # -------------------------
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
           repository: tbhuvaneswar/car-gitops
           path: car-gitops
-          token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
+          token: ${{ secrets.GITOPS_PAT }}
+          persist-credentials: false
           fetch-depth: 0
 
+      # -------------------------
+      # Update manifests
+      # -------------------------
       - name: Update GitOps overlays image tag
         run: |
           set -euo pipefail
@@ -68,7 +88,12 @@ jobs:
             sed -i "s#ghcr.io/.*/dummy-car:.*#ghcr.io/${OWNER}/dummy-car:${TAG}#g" "$FILE"
           done
 
+      # -------------------------
+      # Commit & Push using PAT
+      # -------------------------
       - name: Commit and push GitOps changes
+        env:
+          GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
         run: |
           set -euo pipefail
           cd car-gitops
@@ -76,9 +101,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git status
           git add .
-
           git commit -m "deploy dummy-car ${{ steps.vars.outputs.TAG }}" || echo "No changes to commit"
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/tbhuvaneswar/car-gitops.git" HEAD:main
 
+          git push "https://x-access-token:${GITOPS_PAT}@github.com/tbhuvaneswar/car-gitops.git" HEAD:main
