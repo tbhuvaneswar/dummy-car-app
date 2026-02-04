@@ -27,6 +27,13 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Debug identity
+        run: |
+          echo "actor=${{ github.actor }}"
+          echo "repo=${{ github.repository }}"
+          echo "owner=${{ github.repository_owner }}"
+
+
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
