@@ -36,6 +36,13 @@ jobs:
             ghcr.io/tbhuvaneswar/dummy-car:${{ steps.vars.outputs.TAG }}
             ghcr.io/tbhuvaneswar/dummy-car:latest
 
+      - name: Debug identity
+        run: |
+          echo "actor=${{ github.actor }}"
+          echo "repo=${{ github.repository }}"
+          echo "owner=${{ github.repository_owner }}"
+
+
       - name: Update GitOps overlays image tag
         run: |
           TAG=${{ steps.vars.outputs.TAG }}
