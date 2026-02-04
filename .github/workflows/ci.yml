@@ -95,7 +95,7 @@ jobs:
           echo "HTTP=$code"
 
 
-      - name: Commit and push GitOps changes (force PAT)
+      - name: Commit and push GitOps changes (PAT URL)
         env:
           GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
         run: |
@@ -108,15 +108,9 @@ jobs:
           git add .
           git commit -m "deploy dummy-car ${{ steps.vars.outputs.TAG }}" || echo "No changes to commit"
       
-          # Remove any cached credential helper that may force tbhuvaneswar identity
-          git config --unset-all credential.helper || true
-          git config --global --unset-all credential.helper || true
+          # Push with PAT embedded (GitHub masks secrets in logs)
+          git push "https://x-access-token:${GITOPS_PAT}@github.com/bhuvaneswarshweta/car-gitops.git" HEAD:main
       
-          # Force PAT authentication via HTTP header (this overrides everything)
-          AUTH_HEADER=$(printf "x-access-token:%s" "$GITOPS_PAT" | base64)
       
-          git -c http.extraHeader="AUTHORIZATION: basic $AUTH_HEADER" \
-              push https://github.com/bhuvaneswarshweta/car-gitops.git HEAD:main
-
-
+      
 
