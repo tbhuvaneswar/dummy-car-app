@@ -80,4 +80,5 @@ jobs:
           git add .
 
           git commit -m "deploy dummy-car ${{ steps.vars.outputs.TAG }}" || echo "No changes to commit"
-          git push origin main
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/tbhuvaneswar/car-gitops.git" HEAD:main
+
