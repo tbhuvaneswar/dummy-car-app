@@ -64,6 +64,15 @@ jobs:
           grep -R --line-number "dummy-car" . || true
 
 
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: bhuvaneswarshweta/car-gitops
+          path: car-gitops
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+
+
       - name: Update GitOps overlays image tag
         run: |
           TAG=${{ steps.vars.outputs.TAG }}
