@@ -83,6 +83,17 @@ jobs:
             FILE="car-gitops/apps/dummy-car/overlays/${ENV}/patch.yaml"
             sed -i "s#ghcr.io/.*/dummy-car:.*#ghcr.io/${OWNER}/dummy-car:${TAG}#g" "$FILE"
           done
+      
+      - name: Verify GITOPS_PAT access to GitOps repo
+        env:
+          GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
+        run: |
+          set -e
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token $GITOPS_PAT" \
+            https://api.github.com/repos/bhuvaneswarshweta/car-gitops)
+          echo "HTTP=$code"
+
 
       - name: Commit and push GitOps changes
         env:
