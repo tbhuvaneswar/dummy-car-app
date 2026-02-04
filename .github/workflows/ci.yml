@@ -69,7 +69,7 @@ jobs:
         with:
           repository: bhuvaneswarshweta/car-gitops
           path: car-gitops
-          token: ${{ secrets.GITOPS_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
       
 
