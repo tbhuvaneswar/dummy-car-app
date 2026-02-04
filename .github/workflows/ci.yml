@@ -1,11 +1,11 @@
-name: Build + Push + Update GitOps (single repo)
+name: Build + Push + Update GitOps
 
 on:
   push:
     branches: ["main"]
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout app repo
         uses: actions/checkout@v4
 
       - name: Set tag
@@ -25,6 +25,7 @@ jobs:
           echo "actor=${{ github.actor }}"
           echo "repo=${{ github.repository }}"
           echo "owner=${{ github.repository_owner }}"
+          echo "tag=${{ steps.vars.outputs.TAG }}"
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -42,75 +43,41 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/dummy-car:${{ steps.vars.outputs.TAG }}
             ghcr.io/${{ github.repository_owner }}/dummy-car:latest
 
-      - name: Debug GitOps paths
-        run: |
-          echo "PWD=$(pwd)"
-          echo "Top-level files/folders:"
-          ls -la
-
-          echo "Check if car-gitops exists:"
-          ls -la car-gitops || echo "car-gitops folder NOT found"
-
-          echo "Search for overlays folders:"
-          find . -maxdepth 6 -type d -name overlays -print || true
-
-          echo "Search for patch.yaml:"
-          find . -maxdepth 10 -type f -name patch.yaml -print || true
-
-          echo "Search for kustomization.yaml:"
-          find . -maxdepth 10 -type f -name kustomization.yaml -print || true
-
-          echo "Search for dummy-car references:"
-          grep -R --line-number "dummy-car" . || true
-
-
+      # Checkout GitOps repo (now under tbhuvaneswar)
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
-          repository: bhuvaneswarshweta/car-gitops
+          repository: tbhuvaneswar/car-gitops
           path: car-gitops
           token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: false
-      
-
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Update GitOps overlays image tag
         run: |
+          set -euo pipefail
           TAG=${{ steps.vars.outputs.TAG }}
           OWNER=${{ github.repository_owner }}
 
           for ENV in dev1 dev2 qa prod; do
             FILE="car-gitops/apps/dummy-car/overlays/${ENV}/patch.yaml"
+            if [ ! -f "$FILE" ]; then
+              echo "ERROR: Missing file: $FILE"
+              exit 1
+            fi
             sed -i "s#ghcr.io/.*/dummy-car:.*#ghcr.io/${OWNER}/dummy-car:${TAG}#g" "$FILE"
           done
-      
-      - name: Verify GITOPS_PAT access to GitOps repo
-        env:
-          GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
-        run: |
-          set -e
-          code=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token $GITOPS_PAT" \
-            https://api.github.com/repos/bhuvaneswarshweta/car-gitops)
-          echo "HTTP=$code"
 
-
-      - name: Commit and push GitOps changes (PAT URL)
-        env:
-          GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
+      - name: Commit and push GitOps changes
         run: |
           set -euo pipefail
           cd car-gitops
-      
+
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-      
-          git add .
-          git commit -m "deploy dummy-car ${{ steps.vars.outputs.TAG }}" || echo "No changes to commit"
-      
-          # Push with PAT embedded (GitHub masks secrets in logs)
-          git push "https://x-access-token:${GITOPS_PAT}@github.com/bhuvaneswarshweta/car-gitops.git" HEAD:main
-      
-      
-      
 
+          git status
+          git add .
+
+          git commit -m "deploy dummy-car ${{ steps.vars.outputs.TAG }}" || echo "No changes to commit"
+          git push origin main
