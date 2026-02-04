@@ -42,6 +42,28 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/dummy-car:${{ steps.vars.outputs.TAG }}
             ghcr.io/${{ github.repository_owner }}/dummy-car:latest
 
+      - name: Debug GitOps paths
+        run: |
+          echo "PWD=$(pwd)"
+          echo "Top-level files/folders:"
+          ls -la
+
+          echo "Check if car-gitops exists:"
+          ls -la car-gitops || echo "car-gitops folder NOT found"
+
+          echo "Search for overlays folders:"
+          find . -maxdepth 6 -type d -name overlays -print || true
+
+          echo "Search for patch.yaml:"
+          find . -maxdepth 10 -type f -name patch.yaml -print || true
+
+          echo "Search for kustomization.yaml:"
+          find . -maxdepth 10 -type f -name kustomization.yaml -print || true
+
+          echo "Search for dummy-car references:"
+          grep -R --line-number "dummy-car" . || true
+
+
       - name: Update GitOps overlays image tag
         run: |
           TAG=${{ steps.vars.outputs.TAG }}
