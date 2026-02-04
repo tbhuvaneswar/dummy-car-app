@@ -95,23 +95,28 @@ jobs:
           echo "HTTP=$code"
 
 
-      - name: Commit and push GitOps changes
+      - name: Commit and push GitOps changes (force PAT)
         env:
           GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
         run: |
           set -euo pipefail
           cd car-gitops
-
+      
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-
-          git status
+      
           git add .
           git commit -m "deploy dummy-car ${{ steps.vars.outputs.TAG }}" || echo "No changes to commit"
+      
+          # Remove any cached credential helper that may force tbhuvaneswar identity
+          git config --unset-all credential.helper || true
+          git config --global --unset-all credential.helper || true
+      
+          # Force PAT authentication via HTTP header (this overrides everything)
+          AUTH_HEADER=$(printf "x-access-token:%s" "$GITOPS_PAT" | base64)
+      
+          git -c http.extraHeader="AUTHORIZATION: basic $AUTH_HEADER" \
+              push https://github.com/bhuvaneswarshweta/car-gitops.git HEAD:main
 
-          # FORCE token-based auth (this avoids using tbhuvaneswar creds)
-          git remote set-url origin "https://x-access-token:${GITOPS_PAT}@github.com/bhuvaneswarshweta/car-gitops.git"
-
-          git push origin main
 
 
